@@ -29,6 +29,8 @@ import com.google.common.base.Preconditions;
 import org.apache.spark.memory.MemoryConsumer;
 import org.apache.spark.memory.MemoryMode;
 import org.apache.spark.memory.TaskMemoryManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -52,19 +54,32 @@ import java.util.stream.Collectors;
  * io.glutenproject.memory.memtarget.spark.TreeMemoryConsumers}.
  */
 public class TreeMemoryConsumer extends MemoryConsumer implements TreeMemoryTarget {
+  private static final Logger LOG = LoggerFactory.getLogger(TreeMemoryConsumer.class);
 
   private final SimpleMemoryUsageRecorder recorder = new SimpleMemoryUsageRecorder();
   private final Map<String, TreeMemoryTarget> children = new HashMap<>();
   private final String name = MemoryTargetUtil.toUniqueName("Gluten.Tree");
 
   TreeMemoryConsumer(TaskMemoryManager taskMemoryManager) {
-    super(taskMemoryManager, taskMemoryManager.pageSizeBytes(), MemoryMode.OFF_HEAP);
+    super(taskMemoryManager, taskMemoryManager.pageSizeBytes(), MemoryMode.ON_HEAP);
   }
 
   @Override
   public long borrow(long size) {
     if (size == 0) {
       // or Spark complains about the zero size by throwing an error
+      return 0;
+    }
+    long freeMemory = Runtime.getRuntime().freeMemory();
+
+    if (size > freeMemory) {
+      long usedBytes = this.usedBytes();
+      long totalMemory = Runtime.getRuntime().totalMemory();
+      LOG.warn(
+          String.format(
+              "Failing allocation as unified memory is OOM. "
+                  + "Used Off-heap: %d, Used On-Heap: %d, Free On_heap: %d, Allocation: %d.",
+              usedBytes, (totalMemory - freeMemory), freeMemory, size));
       return 0;
     }
     long acquired = acquireMemory(size);
