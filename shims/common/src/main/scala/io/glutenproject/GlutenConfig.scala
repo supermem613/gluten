@@ -488,6 +488,8 @@ object GlutenConfig {
 
   val GLUTEN_UI_ENABLED = "spark.gluten.ui.enabled"
 
+  val GLUTEN_DYNAMIC_OFFHEAP_SIZING_ENABLED = "spark.gluten.memory.dynamic.offHeap.sizing.enabled"
+
   var ins: GlutenConfig = _
 
   def getConf: GlutenConfig = {
@@ -1643,7 +1645,7 @@ object GlutenConfig {
       .createWithDefault(true)
 
   val DYNAMIC_OFFHEAP_SIZING_ENABLED =
-    buildStaticConf("spark.gluten.memory.dynamic.offHeap.sizing.enabled")
+    buildConf(GlutenConfig.GLUTEN_DYNAMIC_OFFHEAP_SIZING_ENABLED)
       .internal()
       .doc(" Enable using free on-heap memory as off-heap memory.")
       .booleanConf
