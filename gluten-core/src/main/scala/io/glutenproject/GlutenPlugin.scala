@@ -201,12 +201,14 @@ private[glutenproject] class GlutenExecutorPlugin extends ExecutorPlugin {
   override def init(ctx: PluginContext, extraConf: util.Map[String, String]): Unit = {
     val conf = ctx.conf()
 
-    // Must set the 'spark.memory.offHeap.size' value to native memory malloc
+    // Must set the 'spark.memory.offHeap.size' value to native memory malloc if dynamic
+    // off-heap sizing is disabled.
     if (
-      !conf.getBoolean("spark.memory.offHeap.enabled", false) ||
+      !conf.getBoolean("spark.gluten.memory.dynamic.offHeap.sizing.enabled", true) &&
+      (!conf.getBoolean("spark.memory.offHeap.enabled", false) ||
       (JavaUtils.byteStringAsBytes(
         conf.get("spark.memory.offHeap.size").toString) / 1024 / 1024).toInt <= 0
-    ) {
+    )) {
       throw new IllegalArgumentException(
         s"Must set 'spark.memory.offHeap.enabled' to true" +
           s" and set off heap memory size by option 'spark.memory.offHeap.size'")

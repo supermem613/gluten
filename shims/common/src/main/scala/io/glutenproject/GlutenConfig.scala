@@ -340,6 +340,9 @@ class GlutenConfig(conf: SQLConf) extends Logging {
   def enableColumnarProjectCollapse: Boolean = conf.getConf(ENABLE_COLUMNAR_PROJECT_COLLAPSE)
 
   def awsSdkLogLevel: String = conf.getConf(AWS_SDK_LOG_LEVEL)
+
+  def dynamicOffHeapSizingEnabled: Boolean =
+    conf.getConf(DYNAMIC_OFFHEAP_SIZING_ENABLED)
 }
 
 object GlutenConfig {
@@ -1638,4 +1641,11 @@ object GlutenConfig {
       .doc(" Enable velox orc scan. If disabled, vanilla spark orc scan will be used.")
       .booleanConf
       .createWithDefault(true)
+
+  val DYNAMIC_OFFHEAP_SIZING_ENABLED =
+    buildStaticConf("spark.gluten.memory.dynamic.offHeap.sizing.enabled")
+      .internal()
+      .doc(" Enable using free on-heap memory as off-heap memory.")
+      .booleanConf
+      .createWithDefault(false)
 }

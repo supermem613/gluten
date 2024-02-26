@@ -16,6 +16,7 @@
  */
 package io.glutenproject.memory.memtarget.spark;
 
+import io.glutenproject.GlutenConfig;
 import io.glutenproject.memory.MemoryUsageStatsBuilder;
 import io.glutenproject.memory.SimpleMemoryUsageRecorder;
 import io.glutenproject.memory.memtarget.MemoryTargetUtil;
@@ -59,9 +60,16 @@ public class TreeMemoryConsumer extends MemoryConsumer implements TreeMemoryTarg
   private final SimpleMemoryUsageRecorder recorder = new SimpleMemoryUsageRecorder();
   private final Map<String, TreeMemoryTarget> children = new HashMap<>();
   private final String name = MemoryTargetUtil.toUniqueName("Gluten.Tree");
+  private final boolean dynamicOffHeapSizingEnabled =
+      GlutenConfig.getConf().dynamicOffHeapSizingEnabled();
 
   TreeMemoryConsumer(TaskMemoryManager taskMemoryManager) {
-    super(taskMemoryManager, taskMemoryManager.pageSizeBytes(), MemoryMode.ON_HEAP);
+    super(
+        taskMemoryManager,
+        taskMemoryManager.pageSizeBytes(),
+        GlutenConfig.getConf().dynamicOffHeapSizingEnabled()
+            ? MemoryMode.ON_HEAP
+            : MemoryMode.OFF_HEAP);
   }
 
   @Override
@@ -72,13 +80,13 @@ public class TreeMemoryConsumer extends MemoryConsumer implements TreeMemoryTarg
     }
     long freeMemory = Runtime.getRuntime().freeMemory();
 
-    if (size > freeMemory) {
+    if (dynamicOffHeapSizingEnabled && (size > freeMemory)) {
       long usedBytes = this.usedBytes();
       long totalMemory = Runtime.getRuntime().totalMemory();
       LOG.warn(
           String.format(
               "Failing allocation as unified memory is OOM. "
-                  + "Used Off-heap: %d, Used On-Heap: %d, Free On_heap: %d, Allocation: %d.",
+                  + "Used Off-heap: %d, Used On-Heap: %d, Free On-heap: %d, Allocation: %d.",
               usedBytes, (totalMemory - freeMemory), freeMemory, size));
       return 0;
     }
