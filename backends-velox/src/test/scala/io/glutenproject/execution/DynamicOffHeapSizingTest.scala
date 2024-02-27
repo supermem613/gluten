@@ -42,7 +42,6 @@ class DynamicOffHeapSizingTest extends VeloxWholeStageTransformerSuite {
       .set("spark.executor.memory", "5GB")
       .set("spark.gluten.memory.dynamic.offHeap.sizing.enabled", "true")
       .set("spark.memory.offHeap.enabled", "false")
-      .set("spark.driver.memory", "8GB")
       .set("spark.driver.maxResultSize", "50GB")
       .set("spark.gluten.sql.debug", "true")
       .set("spark.gluten.sql.columnar.backend.velox.glogSeverityLevel", "0")
