@@ -185,6 +185,8 @@ class GlutenConfig(conf: SQLConf) extends Logging {
 
   def fallbackIgnoreRowToColumnar: Boolean = conf.getConf(COLUMNAR_FALLBACK_IGNORE_ROW_TO_COLUMNAR)
 
+  def fallbackExpressionsThreshold: Int = conf.getConf(COLUMNAR_FALLBACK_EXPRESSIONS_THRESHOLD)
+
   def fallbackPreferColumnar: Boolean = conf.getConf(COLUMNAR_FALLBACK_PREFER_COLUMNAR)
 
   def numaBindingInfo: GlutenNumaBindingInfo = {
@@ -299,7 +301,9 @@ class GlutenConfig(conf: SQLConf) extends Logging {
   def memoryUseHugePages: Boolean =
     conf.getConf(COLUMNAR_VELOX_MEMORY_USE_HUGE_PAGES)
 
-  def debug: Boolean = conf.getConf(DEBUG_LEVEL_ENABLED)
+  def debug: Boolean = conf.getConf(DEBUG_ENABLED)
+  def debugKeepJniWorkspace: Boolean =
+    conf.getConf(DEBUG_ENABLED) && conf.getConf(DEBUG_KEEP_JNI_WORKSPACE)
   def taskStageId: Int = conf.getConf(BENCHMARK_TASK_STAGEID)
   def taskPartitionId: Int = conf.getConf(BENCHMARK_TASK_PARTITIONID)
   def taskId: Long = conf.getConf(BENCHMARK_TASK_TASK_ID)
@@ -445,6 +449,7 @@ object GlutenConfig {
   val GLUTEN_SAVE_DIR = "spark.gluten.saveDir"
 
   val GLUTEN_DEBUG_MODE = "spark.gluten.sql.debug"
+  val GLUTEN_DEBUG_KEEP_JNI_WORKSPACE = "spark.gluten.sql.debug.keepJniWorkspace"
 
   // Added back to Spark Conf during executor initialization
   val GLUTEN_ONHEAP_SIZE_IN_BYTES_KEY = "spark.gluten.memory.onHeap.size.in.bytes"
@@ -1037,6 +1042,14 @@ object GlutenConfig {
       .booleanConf
       .createWithDefault(true)
 
+  val COLUMNAR_FALLBACK_EXPRESSIONS_THRESHOLD =
+    buildConf("spark.gluten.sql.columnar.fallback.expressions.threshold")
+      .internal()
+      .doc("Fall back filter/project if number of nested expressions reaches this threshold," +
+        " considering Spark codegen can bring better performance for such case.")
+      .intConf
+      .createWithDefault(50)
+
   val COLUMNAR_FALLBACK_PREFER_COLUMNAR =
     buildConf("spark.gluten.sql.columnar.fallback.preferColumnar")
       .internal()
@@ -1191,14 +1204,14 @@ object GlutenConfig {
       .createWithDefault(2)
 
   val COLUMNAR_VELOX_GLOG_VERBOSE_LEVEL =
-    buildStaticConf("spark.gluten.sql.columnar.backend.velox.glogVerboseLevel")
+    buildConf("spark.gluten.sql.columnar.backend.velox.glogVerboseLevel")
       .internal()
       .doc("Set glog verbose level in Velox backend, same as FLAGS_v.")
       .intConf
       .createWithDefault(0)
 
   val COLUMNAR_VELOX_GLOG_SEVERITY_LEVEL =
-    buildStaticConf("spark.gluten.sql.columnar.backend.velox.glogSeverityLevel")
+    buildConf("spark.gluten.sql.columnar.backend.velox.glogSeverityLevel")
       .internal()
       .doc("Set glog severity level in Velox backend, same as FLAGS_minloglevel.")
       .intConf
@@ -1317,8 +1330,14 @@ object GlutenConfig {
         "Valid values are 'trace', 'debug', 'info', 'warn' and 'error'.")
       .createWithDefault("DEBUG")
 
-  val DEBUG_LEVEL_ENABLED =
+  val DEBUG_ENABLED =
     buildConf(GLUTEN_DEBUG_MODE)
+      .internal()
+      .booleanConf
+      .createWithDefault(false)
+
+  val DEBUG_KEEP_JNI_WORKSPACE =
+    buildConf(GLUTEN_DEBUG_KEEP_JNI_WORKSPACE)
       .internal()
       .booleanConf
       .createWithDefault(false)
