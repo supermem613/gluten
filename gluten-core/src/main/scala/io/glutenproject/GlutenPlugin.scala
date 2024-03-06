@@ -178,7 +178,6 @@ private[glutenproject] class GlutenDriverPlugin extends DriverPlugin with Loggin
 
     // Optimistic off-heap sizes, assuming all storage memory can be borrowed into execution
     // memory pool, regardless of Spark option spark.memory.storageFraction.
-
     conf.set(GlutenConfig.GLUTEN_OFFHEAP_SIZE_IN_BYTES_KEY, offHeapSize.toString)
     val offHeapPerTask = offHeapSize / taskSlots
     conf.set(GlutenConfig.GLUTEN_TASK_OFFHEAP_SIZE_IN_BYTES_KEY, offHeapPerTask.toString)
