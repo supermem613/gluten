@@ -79,26 +79,26 @@ public class TreeMemoryConsumer extends MemoryConsumer implements TreeMemoryTarg
       // or Spark complains about the zero size by throwing an error
       return 0;
     }
-    long totalMemory = Runtime.getRuntime().totalMemory();
-    long freeMemory = Runtime.getRuntime().freeMemory();
-    long usedOffHeapBytes = this.usedBytes();
-    long usedOnHeapBytes = (totalMemory - freeMemory);
-
-    if (dynamicOffHeapSizingEnabled
-        && (size + usedOffHeapBytes + usedOnHeapBytes > maxOnHeapMemoryInBytes)) {
-      LOG.warn(
-          String.format(
-              "Failing allocation as unified memory is OOM. "
-                  + "Used Off-heap: %d, Used On-Heap: %d,"
-                  + "Free On-heap: %d, Total On-heap: %d,"
-                  + "Max On-heap: %d, Allocation: %d.",
-              usedOffHeapBytes,
-              usedOnHeapBytes,
-              freeMemory,
-              totalMemory,
-              maxOnHeapMemoryInBytes,
-              size));
-      return 0;
+    if (dynamicOffHeapSizingEnabled) {
+      long totalMemory = Runtime.getRuntime().totalMemory();
+      long freeMemory = Runtime.getRuntime().freeMemory();
+      long usedOffHeapBytes = this.usedBytes();
+      long usedOnHeapBytes = (totalMemory - freeMemory);
+      if (size + usedOffHeapBytes + usedOnHeapBytes > maxOnHeapMemoryInBytes) {
+        LOG.warn(
+            String.format(
+                "Failing allocation as unified memory is OOM. "
+                    + "Used Off-heap: %d, Used On-Heap: %d,"
+                    + "Free On-heap: %d, Total On-heap: %d,"
+                    + "Max On-heap: %d, Allocation: %d.",
+                usedOffHeapBytes,
+                usedOnHeapBytes,
+                freeMemory,
+                totalMemory,
+                maxOnHeapMemoryInBytes,
+                size));
+        return 0;
+      }
     }
     long acquired = acquireMemory(size);
     recorder.inc(acquired);
