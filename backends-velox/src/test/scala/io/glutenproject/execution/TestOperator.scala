@@ -732,6 +732,30 @@ class TestOperator extends VeloxWholeStageTransformerSuite {
     }
   }
 
+  test("test inline function") {
+
+    withTempView("t1") {
+      sql("""select * from values
+            |  array(
+            |    named_struct('c1', 0, 'c2', 1),
+            |    null,
+            |    named_struct('c1', 2, 'c2', 3)
+            |  ),
+            |  array(
+            |    null,
+            |    named_struct('c1', 0, 'c2', 1),
+            |    named_struct('c1', 2, 'c2', 3)
+            |  )
+            |as tbl(a)
+         """.stripMargin).createOrReplaceTempView("t1")
+      runQueryAndCompare("""
+                           |SELECT inline(a) from t1;
+                           |""".stripMargin) {
+        checkOperatorMatch[GenerateExecTransformer]
+      }
+    }
+  }
+
   test("test array functions") {
     withTable("t") {
       sql("CREATE TABLE t (c1 ARRAY<INT>, c2 ARRAY<INT>, c3 STRING) using parquet")
@@ -903,7 +927,7 @@ class TestOperator extends VeloxWholeStageTransformerSuite {
       withSQLConf("spark.sql.autoBroadcastJoinThreshold" -> "1MB") {
         runQueryAndCompare(
           """
-            |select * from t1 cross join t2;
+            |select * from t1 cross join t2 on 2*t1.c1 > 3*t2.c1;
             |""".stripMargin
         ) {
           checkOperatorMatch[BroadcastNestedLoopJoinExecTransformer]
@@ -1144,5 +1168,16 @@ class TestOperator extends VeloxWholeStageTransformerSuite {
         |WHERE l_orderkey not in (l_partkey, l_suppkey, l_linenumber)
         |""".stripMargin
     )(df => checkFallbackOperators(df, 0))
+  }
+
+  test("Support StructType in HashAggregate") {
+    runQueryAndCompare("""
+                         |select s, count(1) from (
+                         |   select named_struct('id', cast(id as int),
+                         |   'id_str', cast(id as string)) as s from range(100)
+                         |) group by s
+                         |""".stripMargin) {
+      checkOperatorMatch[HashAggregateExecTransformer]
+    }
   }
 }
